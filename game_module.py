@@ -121,5 +121,5 @@ class game_module:
                 (self.pos[0], self.pos[1]-1),
                 (self.pos[0], self.pos[1]+1)]
         sensor_act = [self.check_collision(xpos,ypos) for (xpos,ypos) in sensor_pos]
-        return "{}, {}, {}, {},".format(sensor_act[0], sensor_act[1], sensor_act[2], sensor_act[3])
+        return "{}, {}, {}, {}".format(sensor_act[0], sensor_act[1], sensor_act[2], sensor_act[3])
 
