@@ -1,6 +1,7 @@
 import pygame
 import random
 import numpy as np
+import os
 
 class game_module:
     def __init__(self):
@@ -20,7 +21,10 @@ class game_module:
         self.obs = []
         self.obs_mat = np.zeros(self.world_size)
 
-        self.outfile = './game_dat.out'
+        self.outdir = './data/'
+        self.outfile = self.outdir + 'game_dat.out'
+        if not os.path.exists(self.outdir):
+            os.makedirs(self.outdir)
 
     def start_game(self):
         pygame.init()
