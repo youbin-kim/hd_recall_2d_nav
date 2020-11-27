@@ -95,7 +95,7 @@ class hd_module:
         #   - sample_vec: bipolar HD vector
 
         sensor_vec = self.encode_sensors(sensor_in)
-        act_vec = hd_actuator_vals[act_in,:]
+        act_vec = self.hd_actuator_vals[act_in,:]
         sample_vec = self.hd_mul(sensor_vec,act_vec)
 
         return sample_vec
