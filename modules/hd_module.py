@@ -114,6 +114,18 @@ class hd_module:
         return act_out
 
     def train_from_file(self, file_in):
+        # Build the program HV from a text file of recorded moves
+        # inputs:
+        #   -file_in: filename for the recorded moves
+        # Currently, the hd_program_vec is not being thresholded
+        game_data = np.loadtxt(file_in, dtype = np.int8, delimiter=',')
+        sensor_vals = game_data[:,:-1]
+        actuator_vals = game_data[:,-1]
+        n_samples = game_data.shape[0]
+
+        for sample in range(n_samples):
+            sample_vec = self.train_sample(sensor_vals[sample,:],actuator_vals[sample])
+            self.hd_program_vec = self.hd_program_vec + sample_vec
         return
 
     def train_live(self):
