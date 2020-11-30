@@ -88,7 +88,7 @@ class game_module:
         ypixel = (self.pos[1]+1)*self.scale
         pygame.draw.rect(screen, self.blue, [xpixel,ypixel,self.scale,self.scale])
         return
-        
+
 
     def draw_obstacles(self, screen):
         for pos in self.obs:
@@ -122,11 +122,10 @@ class game_module:
         return collision
 
     def get_sensor(self):
-        sensor_pos = [(self.pos[0]-1, self.pos[1]),
-                (self.pos[0]+1, self.pos[1]),
-                (self.pos[0], self.pos[1]-1),
-                (self.pos[0], self.pos[1]+1)]
+        sensor_pos = [(self.pos[0]+1, self.pos[1]),
+                (self.pos[0]-1, self.pos[1]),
+                (self.pos[0], self.pos[1]+1),
+                (self.pos[0], self.pos[1]-1)]
         sensor_act = [self.check_collision(xpos,ypos) for (xpos,ypos) in sensor_pos]
         print(sensor_act)
         return "{}, {}, {}, {}".format(sensor_act[0], sensor_act[1], sensor_act[2], sensor_act[3])
-
