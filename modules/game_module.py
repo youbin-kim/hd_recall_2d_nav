@@ -59,6 +59,7 @@ class game_module:
             if event.type == pygame.QUIT:
                 running = False
             elif event.type == pygame.KEYDOWN:
+                current_sensor = self.get_sensor()
                 if event.key == pygame.K_LEFT:
                     self.pos[0] -= 1
                     actuator = 0
@@ -71,7 +72,8 @@ class game_module:
                 elif event.key == pygame.K_DOWN:
                     self.pos[1] += 1
                     actuator = 3
-                f.write(self.get_sensor() + ", " + str(actuator) + "\n")
+                f.write(current_sensor + ", " + str(actuator) + "\n")
+                print(actuator)
             if (self.check_collision(self.pos[0], self.pos[1])):
                 running = False
 
@@ -125,5 +127,6 @@ class game_module:
                 (self.pos[0], self.pos[1]-1),
                 (self.pos[0], self.pos[1]+1)]
         sensor_act = [self.check_collision(xpos,ypos) for (xpos,ypos) in sensor_pos]
+        print(sensor_act)
         return "{}, {}, {}, {}".format(sensor_act[0], sensor_act[1], sensor_act[2], sensor_act[3])
 
