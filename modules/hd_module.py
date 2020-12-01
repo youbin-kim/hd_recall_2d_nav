@@ -27,7 +27,7 @@ class hd_module:
         if os.path.exists(sensor_vals_fname):
             self.hd_sensor_vals = np.load(sensor_vals_fname)
         else:
-            self.hd_sensor_vals = self.create_bipolar_mem(2,self.dim)
+            self.hd_sensor_vals = self.create_bipolar_mem(2*self.num_sensors,self.dim)
             np.save(sensor_vals_fname, self.hd_sensor_vals)
 
         if os.path.exists(actuator_vals_fname):
@@ -92,19 +92,22 @@ class hd_module:
 
         sensor_vec = np.zeros((self.dim,), dtype = np.int8)
         for i,sensor_val in enumerate(sensor_in):
+            sensor_id_vec = self.hd_sensor_ids[i,:]
+            sensor_val_vec = self.hd_sensor_vals[2*i+sensor_val,:] #each sensor has different 0,1 vector
             #print("sensor ids:")
-            #print(self.hd_sensor_ids[i,:][1:10])
+            #print(sensor_id_vec[1:10])
             #print("sensor vals:")
-            #print(self.hd_sensor_vals[sensor_val,:][1:10])
-            binded_sensor = self.hd_mul(self.hd_sensor_ids[i,:],self.hd_sensor_vals[sensor_val,:])
+            #print(sensor_val_vec[1:10])
+            binded_sensor = self.hd_mul(sensor_id_vec,sensor_val_vec)
             #print("binded sensor:")
             #print(binded_sensor[1:10])
             sensor_vec = sensor_vec + binded_sensor
 
         if self.num_sensors%2 == 0:
-            channel0 = self.hd_mul(self.hd_sensor_ids[0,:],self.hd_sensor_vals[sensor_in[0],:])
-            channel1 = self.hd_mul(self.hd_sensor_ids[1,:],self.hd_sensor_vals[sensor_in[1],:])
-            extra_channel = self.hd_protect(self.hd_mul(channel0,channel1))
+            #channel0 = self.hd_mul(self.hd_sensor_ids[0,:],self.hd_sensor_vals[sensor_in[0],:])
+            #channel1 = self.hd_mul(self.hd_sensor_ids[1,:],self.hd_sensor_vals[sensor_in[1],:])
+            #extra_channel = self.hd_protect(self.hd_mul(channel0,channel1))
+            extra_channel = np.squeeze(self.create_bipolar_mem(1,self.dim))
             sensor_vec = sensor_vec + extra_channel
 
         #print("sensor vec before threshold:")
