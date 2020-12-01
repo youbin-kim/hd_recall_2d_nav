@@ -61,6 +61,7 @@ class hd_module:
         #   - A: bipolar HD vector
         # outputs:
         #   - [A]: bipolar HD vector
+
         return (np.greater_equal(A,0, dtype=np.int8)*2-1)
 
     def hd_protect(self, A):
@@ -79,6 +80,7 @@ class hd_module:
         # outputs:
         #   - i: integer index of closest item in 'hd_actuator_vals'
         dists = np.matmul(self.hd_actuator_vals, A, dtype = np.int)
+        #print(dists)
         return np.argmax(dists)
 
     def encode_sensors(self, sensor_in):
@@ -90,9 +92,23 @@ class hd_module:
 
         sensor_vec = np.zeros((self.dim,), dtype = np.int8)
         for i,sensor_val in enumerate(sensor_in):
+            #print("sensor ids:")
+            #print(self.hd_sensor_ids[i,:][1:10])
+            #print("sensor vals:")
+            #print(self.hd_sensor_vals[sensor_val,:][1:10])
             binded_sensor = self.hd_mul(self.hd_sensor_ids[i,:],self.hd_sensor_vals[sensor_val,:])
+            #print("binded sensor:")
+            #print(binded_sensor[1:10])
             sensor_vec = sensor_vec + binded_sensor
 
+        if self.num_sensors%2 == 0:
+            channel0 = self.hd_mul(self.hd_sensor_ids[0,:],self.hd_sensor_vals[sensor_in[0],:])
+            channel1 = self.hd_mul(self.hd_sensor_ids[1,:],self.hd_sensor_vals[sensor_in[1],:])
+            extra_channel = self.hd_protect(self.hd_mul(channel0,channel1))
+            sensor_vec = sensor_vec + extra_channel
+
+        #print("sensor vec before threshold:")
+        #print(sensor_vec[1:10])
         #return sensor_vec
         #return self.hd_threshold(sensor_vec)
         return self.hd_protect(self.hd_threshold(sensor_vec))
@@ -143,6 +159,10 @@ class hd_module:
         for sample in range(n_samples):
             sample_vec = self.train_sample(sensor_vals[sample,:],actuator_vals[sample])
             program_vec_b4thresh = program_vec_b4thresh + sample_vec
+
+        if n_samples%2 == 0:
+            random_vec = np.squeeze(self.create_bipolar_mem(1,self.dim))
+            program_vec_b4thresh = program_vec_b4thresh + random_vec
 
         if threshold:
             self.hd_program_vec = self.hd_threshold(program_vec_b4thresh)
