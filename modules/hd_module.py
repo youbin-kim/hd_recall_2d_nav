@@ -37,7 +37,7 @@ class hd_module:
             np.save(actuator_vals_fname, self.hd_actuator_vals)
 
         # Initialize program vector
-        self.hd_program_vec = np.zeros((self.dim,), dtype = np.int8)
+        self.hd_program_vec = np.zeros((self.dim,), dtype = np.int)
 
 
     def create_bipolar_mem(self, numitem, dim):
@@ -54,6 +54,14 @@ class hd_module:
         # outputs:
         #   - A*B: bipolar HD vector
         return np.multiply(A,B,dtype = np.int8)
+
+    def hd_perm(self, A):
+        # Return right cyclic shift of input bipolar vector
+        # inputs:
+        #   - A: bipiolar HD vector
+        # outputs:
+        #   - rho(A): bipolar HD vector
+        return np.roll(A,1)
 
     def hd_threshold(self, A):
         # Given integer vector, threshold at zero to bipolar
@@ -74,17 +82,22 @@ class hd_module:
 
     def encode_sensors(self, sensor_in):
         # Encode sensory data into HD space
+        # Currently binds together all sensor inputs
         # inputs:
         #   - sensor_in: array of binary flags (length 4)
         # outputs:
         #   - sensor_vec: bipolar HD vector
-
-        sensor_vec = np.zeros((self.dim,), dtype = np.int8)
+        sensor_vec = np.ones((self.dim,), dtype = np.int8)
         for i,sensor_val in enumerate(sensor_in):
-            binded_sensor = self.hd_mul(self.hd_sensor_ids[i,:],self.hd_sensor_vals[sensor_val,:])
-            sensor_vec = sensor_vec + binded_sensor
+            permuted_vec = self.hd_sensor_vals[sensor_val,:]
+            for j in range(i):
+                permuted_vec = self.hd_perm(permuted_vec)
+            binded_sensor = self.hd_mul(self.hd_sensor_ids[i,:],permuted_vec)
+            #sensor_vec = sensor_vec + binded_sensor
+            sensor_vec = self.hd_mul(sensor_vec, binded_sensor)
 
-        return self.hd_threshold(sensor_vec)
+        return sensor_vec
+        #return self.hd_threshold(sensor_vec)
 
     def train_sample(self, sensor_in, act_in):
         # Multiply encoded sensor vector with actuator vector
@@ -126,6 +139,26 @@ class hd_module:
         for sample in range(n_samples):
             sample_vec = self.train_sample(sensor_vals[sample,:],actuator_vals[sample])
             self.hd_program_vec = self.hd_program_vec + sample_vec
+        return
+
+    def test_from_file(self, file_in):
+        # Prints out input sensor data and resulting output
+        # inputs:
+        #   -file_in: filename for the recorded moves
+        # Currently, the hd_program_vec is not being thresholded
+        game_data = np.loadtxt(file_in, dtype = np.int, delimiter=',')
+        sensor_vals = game_data[:,:-1]
+        actuator_vals = game_data[:,-1]
+        n_samples = game_data.shape[0]
+        correct = 0
+
+        for sample in range(n_samples):
+            print(sensor_vals[sample])
+            act_out = self.test_sample(sensor_vals[sample,:])
+            print(act_out)
+            if (act_out == actuator_vals[sample]):
+                correct += 1
+        print("Accuracy: {}".format(correct/n_samples))
         return
 
     def train_live(self):
