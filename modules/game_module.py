@@ -33,6 +33,8 @@ class game_module:
 
 
     def setup_game(self):
+        self.obs = []
+        self.obs_mat = np.zeros(self.world_size)
         num_block = self.world_size[0]*self.world_size[1]
         obs_idx = random.sample(list(range(num_block)), self.num_obs+1)
         for i in range(self.num_obs):
@@ -52,39 +54,52 @@ class game_module:
         pygame.init()
         screen = pygame.display.set_mode(self.pixel_dim)
 
-        running = True
 
         f = open(self.outfile, 'w')
 
+        running = True
+        not_crash = True
+
         while running:
-            self.game_step(gametype, screen)
+            self.setup_game()
+            while not_crash:
+                self.game_step(gametype, screen)
 
-            pygame.display.update()
-            actuator = 0
+                pygame.display.update()
+                actuator = 0
 
-            event = pygame.event.wait()
+                event = pygame.event.wait()
+                if event.type == pygame.QUIT:
+                    not_crash = False
+                    running = False
+                elif event.type == pygame.KEYDOWN:
+                    current_sensor = self.get_sensor()
+                    if event.key == pygame.K_LEFT:
+                        self.pos[0] -= 1
+                        actuator = 0
+                    elif event.key == pygame.K_RIGHT:
+                        self.pos[0] += 1
+                        actuator = 1
+                    elif event.key == pygame.K_UP:
+                        self.pos[1] -= 1
+                        actuator = 2
+                    elif event.key == pygame.K_DOWN:
+                        self.pos[1] += 1
+                        actuator = 3
+
+                    if (self.check_collision(self.pos[0], self.pos[1])):
+                        not_crash = False
+                    else:
+# *********************** CHANGE BASED ON SENSOR DATA *************************
+                        sensor_str = "{}, {}, {}, {}".format(*current_sensor)
+                        f.write(sensor_str + ", " + str(actuator) + "\n")
+# *****************************************************************************
+            event2 = pygame.event.wait()
             if event.type == pygame.QUIT:
                 running = False
             elif event.type == pygame.KEYDOWN:
-                current_sensor = self.get_sensor()
-                if event.key == pygame.K_LEFT:
-                    self.pos[0] -= 1
-                    actuator = 0
-                elif event.key == pygame.K_RIGHT:
-                    self.pos[0] += 1
-                    actuator = 1
-                elif event.key == pygame.K_UP:
-                    self.pos[1] -= 1
-                    actuator = 2
-                elif event.key == pygame.K_DOWN:
-                    self.pos[1] += 1
-                    actuator = 3
-# *********************** CHANGE BASED ON SENSOR DATA *************************
-                sensor_str = "{}, {}, {}, {}".format(*current_sensor)
-                f.write(sensor_str + ", " + str(actuator) + "\n")
-# *****************************************************************************
-            if (self.check_collision(self.pos[0], self.pos[1])):
-                running = False
+                not_crash = True
+
 
         pygame.display.quit()
         pygame.quit()
@@ -96,31 +111,41 @@ class game_module:
         screen = pygame.display.set_mode(self.pixel_dim)
         clock = pygame.time.Clock()
         running = True
+        not_crash = True
 
         while running:
-            self.game_step(gametype, screen)
+            self.setup_game()
+            while not_crash:
+                self.game_step(gametype, screen)
 
-            pygame.display.update()
-            actuator = 0
+                pygame.display.update()
+                actuator = 0
 
-            clock.tick(3)
-            for event in pygame.event.get():
-                if event.type == pygame.QUIT:
+                clock.tick(3)
+                for event in pygame.event.get():
+                    if event.type == pygame.QUIT:
+                        running = False
+                        not_crash = False
+
+                current_sensor = self.get_sensor()
+                act_out = self.hd_module.test_sample(current_sensor)
+                if act_out == 0:
+                    self.pos[0] -= 1
+                elif act_out == 1:
+                    self.pos[0] += 1
+                elif act_out == 2:
+                    self.pos[1] -= 1
+                elif act_out == 3:
+                    self.pos[1] += 1
+
+                if (self.check_collision(self.pos[0], self.pos[1])):
                     running = False
 
-            current_sensor = self.get_sensor()
-            act_out = self.hd_module.test_sample(current_sensor)
-            if act_out == 0:
-                self.pos[0] -= 1
-            elif act_out == 1:
-                self.pos[0] += 1
-            elif act_out == 2:
-                self.pos[1] -= 1
-            elif act_out == 3:
-                self.pos[1] += 1
-
-            if (self.check_collision(self.pos[0], self.pos[1])):
+            event2 = pygame.event.wait()
+            if event.type == pygame.QUIT:
                 running = False
+            elif event.type == pygame.KEYDOWN:
+                not_crash = True
 
         pygame.display.quit()
         pygame.quit()
