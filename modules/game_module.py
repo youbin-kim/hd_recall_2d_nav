@@ -79,9 +79,10 @@ class game_module:
                 elif event.key == pygame.K_DOWN:
                     self.pos[1] += 1
                     actuator = 3
+# *********************** CHANGE BASED ON SENSOR DATA *************************
                 sensor_str = "{}, {}, {}, {}".format(*current_sensor)
                 f.write(sensor_str + ", " + str(actuator) + "\n")
-                #print(actuator)
+# *****************************************************************************
             if (self.check_collision(self.pos[0], self.pos[1])):
                 running = False
 
@@ -164,6 +165,7 @@ class game_module:
         return
 
     def pos_oob(self, xpos, ypos):
+        # Check if (xpos,ypos) is out of bounds
         oob = 0
         if (xpos < 0 or xpos >= self.world_size[0]):
             oob = 1
@@ -172,6 +174,7 @@ class game_module:
         return oob
 
     def check_collision(self, xpos, ypos):
+        # Check if (xpos,ypos) is out of bounds or occupied by object
         collision = 0
         if (self.pos_oob(xpos, ypos)):
             collision = 1
@@ -181,6 +184,7 @@ class game_module:
         return collision
 
     def random_goal_location(self):
+        # Choose random unoccupied square for the goal position
         num_block = self.world_size[0]*self.world_size[1]
         goal_idx = random.randrange(num_block)
         row_pos = goal_idx//self.world_size[0]
@@ -192,13 +196,14 @@ class game_module:
         self.goal_pos = [row_pos, col_pos]
         return
         
-        
 
+# *********************** CHANGE BASED ON SENSOR DATA *************************
     def get_sensor(self):
+        # list of coordinates for squares around current position
         sensor_pos = [(self.pos[0]-1, self.pos[1]),
                 (self.pos[0]+1, self.pos[1]),
                 (self.pos[0], self.pos[1]-1),
                 (self.pos[0], self.pos[1]+1)]
-        sensor_act = [self.check_collision(xpos,ypos) for (xpos,ypos) in sensor_pos]
-        #print(sensor_act)
-        return sensor_act
+        sensor_vals = [self.check_collision(xpos,ypos) for (xpos,ypos) in sensor_pos]
+        return sensor_vals
+# *****************************************************************************

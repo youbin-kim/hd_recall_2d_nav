@@ -94,6 +94,7 @@ class hd_module:
         for i,sensor_val in enumerate(sensor_in):
             permuted_vec = self.hd_sensor_vals[sensor_val,:]
             for j in range(i):
+                # permute hd_sensor_val based on the corresponding sensor id
                 permuted_vec = self.hd_perm(permuted_vec)
             binded_sensor = self.hd_mul(self.hd_sensor_ids[i,:],permuted_vec)
             #sensor_vec = sensor_vec + binded_sensor
@@ -164,8 +165,3 @@ class hd_module:
         print("Accuracy: {}".format(correct/n_samples))
         return
 
-    def train_live(self):
-        return
-
-    def test_live(self):
-        return
