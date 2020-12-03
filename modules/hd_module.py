@@ -13,26 +13,29 @@ class hd_module:
         if not os.path.exists(self.outdir):
             os.makedirs(self.outdir)
 
-        sensor_ids_fname = self.outdir + 'hd_sensor_ids_dim_' + str(self.dim)
-        sensor_vals_fname = self.outdir + 'hd_sensor_vals_dim_' + str(self.dim)
-        actuator_vals_fname = self.outdir + 'hd_actuator_vals_dim_' + str(self.dim)
+        sensor_ids_fname = self.outdir + 'hd_sensor_ids_dim_' + str(self.dim) + '.npy'
+        sensor_vals_fname = self.outdir + 'hd_sensor_vals_dim_' + str(self.dim) + '.npy'
+        actuator_vals_fname = self.outdir + 'hd_actuator_vals_dim_' + str(self.dim) + '.npy'
 
         # Load/create HD items
         if os.path.exists(sensor_ids_fname):
             self.hd_sensor_ids = np.load(sensor_ids_fname)
         else:
+            print("creating sensor id mem")
             self.hd_sensor_ids = self.create_bipolar_mem(self.num_sensors,self.dim)
             np.save(sensor_ids_fname, self.hd_sensor_ids)
 
         if os.path.exists(sensor_vals_fname):
             self.hd_sensor_vals = np.load(sensor_vals_fname)
         else:
+            print("creating sensor val mem")
             self.hd_sensor_vals = self.create_bipolar_mem(2,self.dim)
             np.save(sensor_vals_fname, self.hd_sensor_vals)
 
         if os.path.exists(actuator_vals_fname):
             self.hd_actuator_vals = np.load(actuator_vals_fname)
         else:
+            print("creating actuator val mem")
             self.hd_actuator_vals = self.create_bipolar_mem(self.num_actuators,self.dim)
             np.save(actuator_vals_fname, self.hd_actuator_vals)
 
