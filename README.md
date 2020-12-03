@@ -2,7 +2,8 @@
 
 Requires numpy and pygame packages
 
-Run "gen_train_data.py" to generate training data. Data will be written to "game_dat.out". Format of output data is CSV where each line represents one action:
+Run "play_game.py" and follow prompts to choose gameplay type.
+If playing the game live, data will be written to "game_dat.out". Format of output data is CSV where each line represents one action:
 
 LSENSOR, RSENSOR, USENSOR, DSENSOR, ACTION
 
