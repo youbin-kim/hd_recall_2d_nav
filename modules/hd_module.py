@@ -90,18 +90,23 @@ class hd_module:
         #   - sensor_in: array of binary flags (length 4)
         # outputs:
         #   - sensor_vec: bipolar HD vector
-        sensor_vec = np.ones((self.dim,), dtype = np.int8)
+        sensor_vec = np.zeros((self.dim,), dtype = np.int8)
+        #sensor_vec = np.ones((self.dim,), dtype = np.int8)
         for i,sensor_val in enumerate(sensor_in):
             permuted_vec = self.hd_sensor_vals[sensor_val,:]
             for j in range(i):
                 # permute hd_sensor_val based on the corresponding sensor id
                 permuted_vec = self.hd_perm(permuted_vec)
             binded_sensor = self.hd_mul(self.hd_sensor_ids[i,:],permuted_vec)
-            #sensor_vec = sensor_vec + binded_sensor
-            sensor_vec = self.hd_mul(sensor_vec, binded_sensor)
+            sensor_vec = sensor_vec + binded_sensor
+            #sensor_vec = self.hd_mul(sensor_vec, binded_sensor)
 
-        return sensor_vec
-        #return self.hd_threshold(sensor_vec)
+        if self.num_sensors%2 == 0:
+            extra_channel = np.squeeze(self.create_bipolar_mem(1,self.dim))
+            sensor_vec = sensor_vec + extra_channel
+
+        #return sensor_vec
+        return self.hd_threshold(sensor_vec)
 
     def train_sample(self, sensor_in, act_in):
         # Multiply encoded sensor vector with actuator vector
@@ -139,10 +144,18 @@ class hd_module:
         sensor_vals = game_data[:,:-1]
         actuator_vals = game_data[:,-1]
         n_samples = game_data.shape[0]
+        program_vec_b4thresh = np.zeros((self.dim,),dtype=np.int8)
 
         for sample in range(n_samples):
             sample_vec = self.train_sample(sensor_vals[sample,:],actuator_vals[sample])
-            self.hd_program_vec = self.hd_program_vec + sample_vec
+            program_vec_b4thresh = program_vec_b4thresh + sample_vec
+
+        if n_samples%2 == 0:
+            random_vec = np.squeeze(self.create_bipolar_mem(1,self.dim))
+            program_vec_b4thresh = program_vec_b4thresh + random_vec
+
+        self.hd_program_vec = self.hd_threshold(program_vec_b4thresh)
+
         return
 
     def test_from_file(self, file_in):
@@ -155,6 +168,7 @@ class hd_module:
         actuator_vals = game_data[:,-1]
         n_samples = game_data.shape[0]
         correct = 0
+        valid = 0
 
         for sample in range(n_samples):
             print(sensor_vals[sample])
@@ -162,6 +176,16 @@ class hd_module:
             print(act_out)
             if (act_out == actuator_vals[sample]):
                 correct += 1
+            if self.is_valid_move(sensor_vals[sample,:],act_out):
+                valid += 1
         print("Accuracy: {}".format(correct/n_samples))
+        print("Valid: {}".format(valid/n_samples))
         return
 
+    def is_valid_move(self, sensor_in, move_in):
+        if sensor_in[move_in]==1:
+            valid = False
+        else:
+            valid = True
+
+        return valid
