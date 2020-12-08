@@ -171,9 +171,10 @@ class hd_module:
         dist_vec = self.hd_mul(xdist_vec, ydist_vec)
         
         last_vec = self.hd_sensor_last[sensor_in[6],:]
-        last_vec = self.hd_mul(dist_vec, last_vec)
+        #last_vec = self.hd_mul(dist_vec, last_vec)
 
-        return self.hd_mul(sensor_vec, last_vec)
+        #return self.hd_mul(sensor_vec, last_vec)
+        return self.hd_threshold(last_vec + sensor_vec + dist_vec)
 
     def new_condition(self, condition_vec, threshold):
         dist = np.matmul(condition_vec, self.hd_threshold(self.hd_cond_vec), dtype = np.int)
@@ -192,7 +193,7 @@ class hd_module:
         #   - sample_vec: bipolar HD vector
 
         sensor_vec = self.encode_sensors(sensor_in)
-        if self.new_condition(sensor_vec, .05):
+        if self.new_condition(sensor_vec, .25):
             act_vec = self.hd_actuator_vals[act_in,:]
             sample_vec = self.hd_mul(sensor_vec,act_vec)
             self.hd_cond_vec += sensor_vec
