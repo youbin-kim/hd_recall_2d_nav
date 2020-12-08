@@ -6,7 +6,7 @@ class hd_module:
     def __init__(self):
         # HD dimension used
         self.dim = 10000
-        self.num_sensors = 4
+        self.num_sensors = 7
         self.num_actuators = 4
 
         self.outdir = './data/'
@@ -15,6 +15,8 @@ class hd_module:
 
         sensor_ids_fname = self.outdir + 'hd_sensor_ids_dim_' + str(self.dim) + '.npy'
         sensor_vals_fname = self.outdir + 'hd_sensor_vals_dim_' + str(self.dim) + '.npy'
+        sensor_dist_fname = self.outdir + 'hd_sensor_dist_' + str(self.dim) + '.npy'
+        sensor_last_fname= self.outdir + 'hd_sensor_last_' + str(self.dim) + '.npy'
         actuator_vals_fname = self.outdir + 'hd_actuator_vals_dim_' + str(self.dim) + '.npy'
 
         # Load/create HD items
@@ -32,6 +34,21 @@ class hd_module:
             self.hd_sensor_vals = self.create_bipolar_mem(2,self.dim)
             np.save(sensor_vals_fname, self.hd_sensor_vals)
 
+        if os.path.exists(sensor_dist_fname):
+            self.hd_sensor_dist = np.load(sensor_dist_fname)
+        else:
+            print("creating sensor dist mem")
+            #self.hd_sensor_dist = self.create_bipolar_CIM(19,self.dim)
+            self.hd_sensor_dist = self.create_bipolar_mem(3,self.dim)
+            np.save(sensor_dist_fname, self.hd_sensor_dist)
+
+        if os.path.exists(sensor_last_fname):
+            self.hd_sensor_last = np.load(sensor_last_fname)
+        else:
+            print("creating sensor last mem")
+            self.hd_sensor_last = self.create_bipolar_mem(4,self.dim)
+            np.save(sensor_last_fname, self.hd_sensor_last)
+
         if os.path.exists(actuator_vals_fname):
             self.hd_actuator_vals = np.load(actuator_vals_fname)
         else:
@@ -42,12 +59,40 @@ class hd_module:
         # Initialize program vector
         self.hd_program_vec = np.zeros((self.dim,), dtype = np.int)
 
+        # Initialize condition vector
+        self.hd_cond_vec = np.zeros((self.dim,), dtype = np.int)
+        self.num_cond = 0
+
 
     def create_bipolar_mem(self, numitem, dim):
         # Creates random bipolar memory of given size
 
         rand_arr = np.rint(np.random.rand(numitem, dim)).astype(np.int8)
         return (rand_arr*2 - 1)
+
+    def create_bipolar_CIM(self, numitem, dim):
+        # Creates random bipolar memory of given size
+        rand_arr = np.rint(np.random.rand(dim,)).astype(np.int8)
+        bipolar_arr = rand_arr*2 - 1
+        neg_arr = -bipolar_arr
+
+        CIM = np.zeros((numitem,dim)).astype(np.int8)
+        block = dim//numitem
+        for i in range(numitem):
+            CIM[i,:i*block] = bipolar_arr[:i*block]
+            CIM[i,i*block:] = neg_arr[i*block:]
+        '''
+        rand_arr = np.rint(np.random.rand(2, dim)).astype(np.int8)
+        bipolar_arr = rand_arr*2 - 1
+
+        CIM = np.zeros((numitem,dim)).astype(np.int8)
+        block = dim//numitem
+        for i in range(numitem):
+            CIM[i,:i*block] = bipolar_arr[0,:i*block]
+            CIM[i,i*block:] = bipolar_arr[1,i*block:]
+        '''
+
+        return CIM
 
     def hd_mul(self, A, B):
         # Return element-wise multiplication between bipolar HD vectors
@@ -90,18 +135,53 @@ class hd_module:
         #   - sensor_in: array of binary flags (length 4)
         # outputs:
         #   - sensor_vec: bipolar HD vector
+
         sensor_vec = np.ones((self.dim,), dtype = np.int8)
-        for i,sensor_val in enumerate(sensor_in):
+        #sensor_vec = np.zeros((self.dim,), dtype = np.int8)
+        for i,sensor_val in enumerate(sensor_in[:4]):
             permuted_vec = self.hd_sensor_vals[sensor_val,:]
             for j in range(i):
                 # permute hd_sensor_val based on the corresponding sensor id
                 permuted_vec = self.hd_perm(permuted_vec)
             binded_sensor = self.hd_mul(self.hd_sensor_ids[i,:],permuted_vec)
+
             #sensor_vec = sensor_vec + binded_sensor
+            #sensor_vec = self.hd_threshold(sensor_vec)
             sensor_vec = self.hd_mul(sensor_vec, binded_sensor)
 
-        return sensor_vec
-        #return self.hd_threshold(sensor_vec)
+        #xdist_vec = self.hd_mul(self.hd_sensor_ids[4,:], self.hd_sensor_dist[sensor_in[4] + 9,:])
+        #ydist_vec = self.hd_mul(self.hd_sensor_ids[5,:], self.hd_perm(self.hd_sensor_dist[sensor_in[5] + 9,:]))
+        if sensor_in[4] > 0:
+            xval = self.hd_sensor_dist[2]
+        elif sensor_in[4] < 0:
+            xval = self.hd_sensor_dist[0]
+        else:
+            xval = self.hd_sensor_dist[1]
+
+        if sensor_in[5] > 0:
+            yval = self.hd_sensor_dist[2]
+        elif sensor_in[5] < 0:
+            yval = self.hd_sensor_dist[0]
+        else:
+            yval = self.hd_sensor_dist[1]
+        yval = self.hd_perm(yval)
+
+        xdist_vec = self.hd_mul(self.hd_sensor_ids[4,:], xval)
+        ydist_vec = self.hd_mul(self.hd_sensor_ids[5,:], yval)
+        dist_vec = self.hd_mul(xdist_vec, ydist_vec)
+        
+        last_vec = self.hd_sensor_last[sensor_in[6],:]
+        last_vec = self.hd_mul(dist_vec, last_vec)
+
+        return self.hd_mul(sensor_vec, last_vec)
+
+    def new_condition(self, condition_vec, threshold):
+        dist = np.matmul(condition_vec, self.hd_threshold(self.hd_cond_vec), dtype = np.int)
+        pct = dist/self.dim
+        if (pct > threshold):
+            return 0
+        else:
+            return 1
 
     def train_sample(self, sensor_in, act_in):
         # Multiply encoded sensor vector with actuator vector
@@ -112,8 +192,13 @@ class hd_module:
         #   - sample_vec: bipolar HD vector
 
         sensor_vec = self.encode_sensors(sensor_in)
-        act_vec = self.hd_actuator_vals[act_in,:]
-        sample_vec = self.hd_mul(sensor_vec,act_vec)
+        if self.new_condition(sensor_vec, .05):
+            act_vec = self.hd_actuator_vals[act_in,:]
+            sample_vec = self.hd_mul(sensor_vec,act_vec)
+            self.hd_cond_vec += sensor_vec
+            self.num_cond += 1
+        else:
+            sample_vec = np.zeros((self.dim), dtype=np.int8)
 
         return sample_vec
 
@@ -157,9 +242,9 @@ class hd_module:
         correct = 0
 
         for sample in range(n_samples):
-            print(sensor_vals[sample])
+            #print("sensor inputs: {}".format(game_data[sample]))
             act_out = self.test_sample(sensor_vals[sample,:])
-            print(act_out)
+            #print("guessed output: {} \t correct output: {}".format(act_out, actuator_vals[sample]))
             if (act_out == actuator_vals[sample]):
                 correct += 1
         print("Accuracy: {}".format(correct/n_samples))
