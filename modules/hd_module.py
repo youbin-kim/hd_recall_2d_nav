@@ -135,16 +135,9 @@ class hd_module:
         #   - sensor_in: array of binary flags (length 4)
         # outputs:
         #   - sensor_vec: bipolar HD vector
-<<<<<<< HEAD
-        sensor_vec = np.zeros((self.dim,), dtype = np.int8)
-        #sensor_vec = np.ones((self.dim,), dtype = np.int8)
-        for i,sensor_val in enumerate(sensor_in):
-=======
-
         sensor_vec = np.ones((self.dim,), dtype = np.int8)
         #sensor_vec = np.zeros((self.dim,), dtype = np.int8)
         for i,sensor_val in enumerate(sensor_in[:4]):
->>>>>>> 94c309adefce105a54706b0b01175e86a63d92c5
             permuted_vec = self.hd_sensor_vals[sensor_val,:]
             for j in range(i):
                 # permute hd_sensor_val based on the corresponding sensor id
