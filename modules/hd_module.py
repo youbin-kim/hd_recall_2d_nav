@@ -8,6 +8,7 @@ class hd_module:
         self.dim = 10000
         self.num_sensors = 7
         self.num_actuators = 4
+        self.sensor_weight = 1
 
         self.outdir = './data/'
         if not os.path.exists(self.outdir):
@@ -117,7 +118,9 @@ class hd_module:
         #   - A: bipolar HD vector
         # outputs:
         #   - [A]: bipolar HD vector
-        return (np.greater_equal(A,0, dtype=np.int8)*2-1)
+        #return (np.greater_equal(A,0, dtype=np.int8)*2-1)
+        return (np.int8(np.greater_equal(A,0))*2-1)
+
 
     def search_actuator_vals(self, A):
         # Find the nearest item in 'hd_actuator_vals' according to Hamming distance
@@ -128,25 +131,24 @@ class hd_module:
         dists = np.matmul(self.hd_actuator_vals, A, dtype = np.int)
         return np.argmax(dists)
 
-    def encode_sensors(self, sensor_in):
+    def encode_sensors(self, sensor_in, train):
         # Encode sensory data into HD space
         # Currently binds together all sensor inputs
         # inputs:
         #   - sensor_in: array of binary flags (length 4)
         # outputs:
         #   - sensor_vec: bipolar HD vector
-        sensor_vec = np.ones((self.dim,), dtype = np.int8)
-        #sensor_vec = np.zeros((self.dim,), dtype = np.int8)
+        sensor_vec = np.ones((self.dim,), dtype = np.int8) #bind
+        #sensor_vec = np.zeros((self.dim,), dtype = np.int8) #bundle
         for i,sensor_val in enumerate(sensor_in[:4]):
             permuted_vec = self.hd_sensor_vals[sensor_val,:]
             for j in range(i):
                 # permute hd_sensor_val based on the corresponding sensor id
                 permuted_vec = self.hd_perm(permuted_vec)
             binded_sensor = self.hd_mul(self.hd_sensor_ids[i,:],permuted_vec)
-
-            #sensor_vec = sensor_vec + binded_sensor
-            #sensor_vec = self.hd_threshold(sensor_vec)
-            sensor_vec = self.hd_mul(sensor_vec, binded_sensor)
+            sensor_vec = self.hd_mul(sensor_vec, binded_sensor) #bind
+            #sensor_vec = sensor_vec + binded_sensor #bundle
+        #sensor_vec = self.hd_threshold(sensor_vec) #bundle
 
         #xdist_vec = self.hd_mul(self.hd_sensor_ids[4,:], self.hd_sensor_dist[sensor_in[4] + 9,:])
         #ydist_vec = self.hd_mul(self.hd_sensor_ids[5,:], self.hd_perm(self.hd_sensor_dist[sensor_in[5] + 9,:]))
@@ -173,7 +175,74 @@ class hd_module:
         #last_vec = self.hd_mul(dist_vec, last_vec)
 
         #return self.hd_mul(sensor_vec, last_vec)
+#        if train:
+#            return self.hd_threshold(last_vec + self.sensor_weight*sensor_vec + dist_vec)
+#        else:
+#            return self.hd_threshold(last_vec + sensor_vec + dist_vec)
+        #random_vec = np.squeeze(self.create_bipolar_mem(1,self.dim))
+
+
         return self.hd_threshold(last_vec + sensor_vec + dist_vec)
+
+
+    def encode_sensors_directional(self, sensor_in, train):
+        # Encode sensory data into HD space
+        # Currently binds together all sensor inputs
+        # inputs:
+        #   - sensor_in: array of binary flags (length 4)
+        # outputs:
+        #   - sensor_vec: bipolar HD vector
+        sensor_vec = np.empty((self.dim,4), dtype = np.int8) #bind
+        for i,sensor_val in enumerate(sensor_in[:4]):
+            permuted_vec = self.hd_sensor_vals[sensor_val,:]
+            for j in range(i):
+                # permute hd_sensor_val based on the corresponding sensor id
+                permuted_vec = self.hd_perm(permuted_vec)
+
+            binded_sensor = self.hd_mul(self.hd_sensor_ids[i,:],permuted_vec)
+            sensor_vec[:,i] = binded_sensor
+
+        xsensors = self.hd_mul(sensor_vec[:,0],sensor_vec[:,1])
+        ysensors = self.hd_mul(sensor_vec[:,2],sensor_vec[:,3])
+
+
+        if sensor_in[4] > 0:
+            xval = self.hd_sensor_dist[2]
+        elif sensor_in[4] < 0:
+            xval = self.hd_sensor_dist[0]
+        else:
+            xval = self.hd_sensor_dist[1]
+
+        if sensor_in[5] > 0:
+            yval = self.hd_sensor_dist[2]
+        elif sensor_in[5] < 0:
+            yval = self.hd_sensor_dist[0]
+        else:
+            yval = self.hd_sensor_dist[1]
+        yval = self.hd_perm(yval)
+
+        xdist_vec = self.hd_mul(self.hd_sensor_ids[4,:], xval)
+        ydist_vec = self.hd_mul(self.hd_sensor_ids[5,:], yval)
+        dist_vec = self.hd_mul(xdist_vec, ydist_vec)
+
+        xsense = self.hd_mul(xsensors,xdist_vec)
+        ysense = self.hd_mul(ysensors,ydist_vec)
+
+        last_vec = self.hd_sensor_last[sensor_in[6],:]
+        #last_vec = self.hd_mul(dist_vec, last_vec)
+
+        #return self.hd_mul(sensor_vec, last_vec)
+#        if train:
+#            return self.hd_threshold(last_vec + self.sensor_weight*sensor_vec + dist_vec)
+#        else:
+#            return self.hd_threshold(last_vec + sensor_vec + dist_vec)
+        #random_vec = np.squeeze(self.create_bipolar_mem(1,self.dim))
+
+
+        return self.hd_threshold(xsense + ysense + last_vec)
+
+
+
 
     def new_condition(self, condition_vec, threshold):
         dist = np.matmul(condition_vec, self.hd_threshold(self.hd_cond_vec), dtype = np.int)
@@ -191,7 +260,7 @@ class hd_module:
         # outputs:
         #   - sample_vec: bipolar HD vector
 
-        sensor_vec = self.encode_sensors(sensor_in)
+        sensor_vec = self.encode_sensors_directional(sensor_in,True)
         if self.new_condition(sensor_vec, .25):
             act_vec = self.hd_actuator_vals[act_in,:]
             sample_vec = self.hd_mul(sensor_vec,act_vec)
@@ -209,7 +278,7 @@ class hd_module:
         # outputs:
         #   - act_out: integer representing decided actuator action
 
-        sensor_vec = self.encode_sensors(sensor_in)
+        sensor_vec = self.encode_sensors_directional(sensor_in,False)
         unbind_vec = self.hd_mul(sensor_vec,self.hd_program_vec)
         act_out = self.search_actuator_vals(unbind_vec)
 
@@ -224,17 +293,17 @@ class hd_module:
         sensor_vals = game_data[:,:-1]
         actuator_vals = game_data[:,-1]
         n_samples = game_data.shape[0]
-        program_vec_b4thresh = np.zeros((self.dim,),dtype=np.int8)
-
+#        program_vec_b4thresh = np.zeros((self.dim,),dtype=np.int8)
+#        for sample in range(n_samples):
+#            sample_vec = self.train_sample(sensor_vals[sample,:],actuator_vals[sample])
+#            program_vec_b4thresh = program_vec_b4thresh + sample_vec
+#        if n_samples%2 == 0:
+#            random_vec = np.squeeze(self.create_bipolar_mem(1,self.dim))
+#            program_vec_b4thresh = program_vec_b4thresh + random_vec
+#        self.hd_program_vec = self.hd_threshold(program_vec_b4thresh)
         for sample in range(n_samples):
             sample_vec = self.train_sample(sensor_vals[sample,:],actuator_vals[sample])
-            program_vec_b4thresh = program_vec_b4thresh + sample_vec
-
-        if n_samples%2 == 0:
-            random_vec = np.squeeze(self.create_bipolar_mem(1,self.dim))
-            program_vec_b4thresh = program_vec_b4thresh + random_vec
-
-        self.hd_program_vec = self.hd_threshold(program_vec_b4thresh)
+            self.hd_program_vec = self.hd_program_vec + sample_vec
 
         return
 

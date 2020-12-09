@@ -13,7 +13,7 @@ class game_module:
         self.pixel_dim = (self.grid_size[0]*self.scale, self.grid_size[1]*self.scale)
 
         self.num_obs = 15
-        self.timeout = 25
+        self.timeout = 100
 
         self.white = (255,255,255)
         self.blue = (0,0,225)
@@ -25,7 +25,7 @@ class game_module:
         self.obs = []
         self.obs_mat = np.zeros(self.world_size)
 
-        self.hd_module = hd_module() 
+        self.hd_module = hd_module()
 
         self.outdir = './data/'
         self.outfile = self.outdir + 'game_dat.out'
@@ -111,6 +111,10 @@ class game_module:
         f.close()
         return
 
+    def set_sensor_weight(self,sensor_weight):
+        self.hd_module.sensor_weight = sensor_weight
+        return
+
     def autoplay_game(self, gametype):
         pygame.init()
         screen = pygame.display.set_mode(self.pixel_dim)
@@ -183,7 +187,7 @@ class game_module:
                     self.random_goal_location()
                     success += 1
                     break
-            
+
                 current_sensor = self.get_sensor()
                 current_sensor.append(last_act)
                 act_out = self.hd_module.test_sample(current_sensor)
@@ -200,7 +204,7 @@ class game_module:
                 if (self.check_collision(self.pos[0], self.pos[1])):
                     not_crash = False
                     crash += 1
-                if (steps >= self.timeout):
+                elif (steps >= self.timeout):
                     not_crash = False
                     stuck += 1
 
@@ -210,7 +214,7 @@ class game_module:
         print("success: {} \t crash: {} \t stuck: {}".format(success, crash, stuck))
         print("success rate: {:.2f}".format(success/(success+crash+stuck)))
 
-        return 
+        return success,crash,stuck
 
     def game_step(self, gametype, screen):
         screen.fill(self.white)
@@ -228,7 +232,7 @@ class game_module:
         ypixel = (self.pos[1]+1)*self.scale
         pygame.draw.rect(screen, self.blue, [xpixel,ypixel,self.scale,self.scale])
         return
-        
+
 
     def draw_obstacles(self, screen):
         for pos in self.obs:
@@ -281,7 +285,7 @@ class game_module:
             col_pos = goal_idx%self.world_size[1]
         self.goal_pos = [row_pos, col_pos]
         return
-        
+
 
 # *********************** CHANGE BASED ON SENSOR DATA *************************
     def get_sensor(self):

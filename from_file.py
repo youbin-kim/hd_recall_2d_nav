@@ -1,6 +1,6 @@
 from modules.hd_module import hd_module
 
-train_file = './data/game_dat.out'
+train_file = './data/game_dat_long.out'
 test_file = './data/game_dat.out'
 
 #train_file = './data/sample_dist_short.out'
