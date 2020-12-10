@@ -219,10 +219,9 @@ class hd_module:
             binded_sensor = self.hd_mul(self.hd_sensor_ids[i,:],permuted_vec)
             sensor_vec[:,i] = binded_sensor
 
-        #xsensors = self.hd_mul(sensor_vec[:,0],sensor_vec[:,1])
-        #ysensors = self.hd_mul(sensor_vec[:,2],sensor_vec[:,3])
-        all_sensors = self.hd_threshold(sensor_vec[:,0]+sensor_vec[:,1]+sensor_vec[:,2]+sensor_vec[:,3])
-        #ysensors = self.hd_mul(sensor_vec[:,2],sensor_vec[:,3])
+        xsensors = self.hd_mul(sensor_vec[:,0],sensor_vec[:,1])
+        ysensors = self.hd_mul(sensor_vec[:,2],sensor_vec[:,3])
+
 
         if sensor_in[4] > 0:
             xval = self.hd_sensor_dist[2]
@@ -243,8 +242,8 @@ class hd_module:
         ydist_vec = self.hd_mul(self.hd_sensor_ids[5,:], yval)
         dist_vec = self.hd_mul(xdist_vec, ydist_vec)
 
-        #xsense = self.hd_mul(xsensors,xdist_vec)
-        #ysense = self.hd_mul(ysensors,ydist_vec)
+        xsense = self.hd_mul(xsensors,xdist_vec)
+        ysense = self.hd_mul(ysensors,ydist_vec)
 
         last_vec = self.hd_sensor_last[sensor_in[6],:]
         #last_vec = self.hd_mul(dist_vec, last_vec)
@@ -258,7 +257,7 @@ class hd_module:
 
 
         #return self.hd_threshold(xsense + ysense + last_vec)
-        return self.hd_mul(all_sensors, self.hd_threshold(xdist_vec + ydist_vec + last_vec))
+        return self.hd_mul(self.hd_mul(xsensors,ysensors), self.hd_threshold(xdist_vec + ydist_vec + last_vec))
 
 
 
