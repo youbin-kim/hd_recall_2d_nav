@@ -11,6 +11,7 @@ class hd_module:
         self.num_sensors = 7
         self.num_actuators = 4
         self.sensor_weight = 1
+        self.threshold_known = 0.25
 
         self.outdir = './data/'
         if not os.path.exists(self.outdir):
@@ -65,6 +66,7 @@ class hd_module:
         # Initialize condition vector
         self.hd_cond_vec = np.zeros((self.dim,), dtype = np.int)
         self.num_cond = 0
+        self.num_thrown = 0
 
 
     def create_bipolar_mem(self, numitem, dim):
@@ -217,9 +219,10 @@ class hd_module:
             binded_sensor = self.hd_mul(self.hd_sensor_ids[i,:],permuted_vec)
             sensor_vec[:,i] = binded_sensor
 
-        xsensors = self.hd_mul(sensor_vec[:,0],sensor_vec[:,1])
-        ysensors = self.hd_mul(sensor_vec[:,2],sensor_vec[:,3])
-
+        #xsensors = self.hd_mul(sensor_vec[:,0],sensor_vec[:,1])
+        #ysensors = self.hd_mul(sensor_vec[:,2],sensor_vec[:,3])
+        all_sensors = self.hd_threshold(sensor_vec[:,0]+sensor_vec[:,1]+sensor_vec[:,2]+sensor_vec[:,3])
+        #ysensors = self.hd_mul(sensor_vec[:,2],sensor_vec[:,3])
 
         if sensor_in[4] > 0:
             xval = self.hd_sensor_dist[2]
@@ -240,8 +243,8 @@ class hd_module:
         ydist_vec = self.hd_mul(self.hd_sensor_ids[5,:], yval)
         dist_vec = self.hd_mul(xdist_vec, ydist_vec)
 
-        xsense = self.hd_mul(xsensors,xdist_vec)
-        ysense = self.hd_mul(ysensors,ydist_vec)
+        #xsense = self.hd_mul(xsensors,xdist_vec)
+        #ysense = self.hd_mul(ysensors,ydist_vec)
 
         last_vec = self.hd_sensor_last[sensor_in[6],:]
         #last_vec = self.hd_mul(dist_vec, last_vec)
@@ -255,7 +258,7 @@ class hd_module:
 
 
         #return self.hd_threshold(xsense + ysense + last_vec)
-        return self.hd_mul(self.hd_mul(xsensors,ysensors), self.hd_threshold(xdist_vec + ydist_vec + last_vec))
+        return self.hd_mul(all_sensors, self.hd_threshold(xdist_vec + ydist_vec + last_vec))
 
 
 
@@ -277,13 +280,14 @@ class hd_module:
         #   - sample_vec: bipolar HD vector
 
         sensor_vec = self.encode_sensors_directional(sensor_in,True)
-        if self.new_condition(sensor_vec, .1):
+        if self.new_condition(sensor_vec, self.threshold_known):
             act_vec = self.hd_actuator_vals[act_in,:]
             sample_vec = self.hd_mul(sensor_vec,act_vec)
             self.hd_cond_vec += sensor_vec
             self.num_cond += 1
         else:
             sample_vec = np.zeros((self.dim), dtype=np.int8)
+            self.num_thrown += 1
 
         return sample_vec
 

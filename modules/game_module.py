@@ -28,6 +28,8 @@ class game_module:
         self.steps = 0
 
         self.hd_module = hd_module()
+        self.num_cond = self.hd_module.num_cond
+        self.num_thrown = self.hd_module.num_thrown
 
         self.outdir = './data/'
         self.outfile = self.outdir + 'game_dat.out'
@@ -52,6 +54,8 @@ class game_module:
 
     def train_from_file(self, filename):
         self.hd_module.train_from_file(filename)
+        self.num_cond = self.hd_module.num_cond
+        self.num_thrown = self.hd_module.num_thrown
 
     def play_game(self, gametype):
         pygame.init()
@@ -115,6 +119,10 @@ class game_module:
 
     def set_sensor_weight(self,sensor_weight):
         self.hd_module.sensor_weight = sensor_weight
+        return
+
+    def set_threshold_known(self,threshold_known):
+        self.hd_module.threshold_known = threshold_known
         return
 
     def autoplay_game(self, gametype):
