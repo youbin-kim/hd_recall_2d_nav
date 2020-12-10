@@ -25,6 +25,8 @@ class game_module:
         self.obs = []
         self.obs_mat = np.zeros(self.world_size)
 
+        self.steps = 0
+
         self.hd_module = hd_module()
 
         self.outdir = './data/'
@@ -125,7 +127,7 @@ class game_module:
         last_act = 0
         while running:
             self.setup_game()
-            steps = 0
+            self.steps = 0
             while not_crash:
                 self.game_step(gametype, screen)
                 pygame.display.update()
@@ -151,10 +153,10 @@ class game_module:
                 last_act = act_out
                 if (self.check_collision(self.pos[0], self.pos[1])):
                     not_crash = False
-                if (steps >= self.timeout):
+                if (self.steps >= self.timeout):
                     not_crash = False
 
-                steps += 1
+                self.steps += 1
 
                 self.game_step(gametype, screen)
                 pygame.display.update()
@@ -180,7 +182,7 @@ class game_module:
         for i in range(num_test):
             not_crash = True
             self.setup_game()
-            steps = 0
+            self.steps = 0
             while not_crash:
 
                 if self.goal_pos == self.pos:
@@ -204,11 +206,11 @@ class game_module:
                 if (self.check_collision(self.pos[0], self.pos[1])):
                     not_crash = False
                     crash += 1
-                elif (steps >= self.timeout):
+                elif (self.steps >= self.timeout):
                     not_crash = False
                     stuck += 1
 
-                steps += 1
+                self.steps += 1
 
 
         print("success: {} \t crash: {} \t stuck: {}".format(success, crash, stuck))
@@ -224,6 +226,7 @@ class game_module:
         if (gametype):
             if self.goal_pos == self.pos:
                 self.random_goal_location()
+                self.steps = 0
             self.draw_goal(screen)
         return
 

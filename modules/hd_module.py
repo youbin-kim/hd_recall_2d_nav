@@ -2,6 +2,8 @@ import random
 import numpy as np
 import os
 
+from scipy.special import softmax
+
 class hd_module:
     def __init__(self):
         # HD dimension used
@@ -128,8 +130,21 @@ class hd_module:
         #   - A: bipolar HD vector
         # outputs:
         #   - i: integer index of closest item in 'hd_actuator_vals'
-        dists = np.matmul(self.hd_actuator_vals, A, dtype = np.int)
+        #dists = np.matmul(self.hd_actuator_vals, A, dtype = np.int)
         return np.argmax(dists)
+
+    def softmax_actuator_vals(self, A):
+        # Find the nearest item in 'hd_actuator_vals' according to Hamming distance
+        # inputs:
+        #   - A: bipolar HD vector
+        # outputs:
+        #   - i: integer index of closest item in 'hd_actuator_vals'
+        dists = np.matmul(self.hd_actuator_vals, A, dtype = np.int)
+        probs = softmax(dists/np.max(dists)*7)
+        #print(dists)
+        #print(probs)
+        
+        return np.random.choice(4, p = probs)
 
     def encode_sensors(self, sensor_in, train):
         # Encode sensory data into HD space
@@ -239,7 +254,8 @@ class hd_module:
         #random_vec = np.squeeze(self.create_bipolar_mem(1,self.dim))
 
 
-        return self.hd_threshold(xsense + ysense + last_vec)
+        #return self.hd_threshold(xsense + ysense + last_vec)
+        return self.hd_mul(self.hd_mul(xsensors,ysensors), self.hd_threshold(xdist_vec + ydist_vec + last_vec))
 
 
 
@@ -261,7 +277,7 @@ class hd_module:
         #   - sample_vec: bipolar HD vector
 
         sensor_vec = self.encode_sensors_directional(sensor_in,True)
-        if self.new_condition(sensor_vec, .25):
+        if self.new_condition(sensor_vec, .1):
             act_vec = self.hd_actuator_vals[act_in,:]
             sample_vec = self.hd_mul(sensor_vec,act_vec)
             self.hd_cond_vec += sensor_vec
@@ -279,8 +295,10 @@ class hd_module:
         #   - act_out: integer representing decided actuator action
 
         sensor_vec = self.encode_sensors_directional(sensor_in,False)
+        #unbind_vec = self.hd_mul(sensor_vec,self.hd_threshold(self.hd_program_vec))
         unbind_vec = self.hd_mul(sensor_vec,self.hd_program_vec)
-        act_out = self.search_actuator_vals(unbind_vec)
+        #act_out = self.search_actuator_vals(unbind_vec)
+        act_out = self.softmax_actuator_vals(unbind_vec)
 
         return act_out
 
